@@ -1,0 +1,30 @@
+{
+  "name": "sails-hook-elasticsearch",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Sacrize/sails-hook-elasticsearch.git"
+  },
+  "sails": {
+    "isHook": true
+  },
+  "keywords": [
+    "sails",
+    "hook",
+    "elasticsearch"
+  ],
+  "author": "Jakub Paprocki",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Sacrize/sails-hook-elasticsearch/issues"
+  },
+  "homepage": "https://github.com/Sacrize/sails-hook-elasticsearch#readme",
+  "dependencies": {
+    "@elastic/elasticsearch": "^7.10.0"
+  }
+}
