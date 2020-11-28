@@ -33,6 +33,31 @@ module.exports = function (sails) {
           maxRetries: 10,
           requestTimeout: 60000,
         },
+        schema: {
+          /**
+           * Index configuration.
+           */
+          config: {},
+          /**
+           * Collect objects for indexing.
+           * @param index
+           */
+          populate: function (index) {},
+          /**
+           * Convert the object to an index write form.
+           * @param {object} data
+           * @returns {object}
+           */
+          serialize: function (data) {},
+          /**
+           * Building search queries.
+           */
+          query: {
+            filter: {},
+            should: {},
+            must: {},
+          }
+        }
       },
     },
     configure: function () {
@@ -334,14 +359,10 @@ module.exports = function (sails) {
           return;
         }
         let model = require(normalizedPath + '/' + fileName);
-        if (!model.config) {
-          sails.log.debug('Index `'+fileName+'` has not config object. Skipping...');
-          return;
-        }
+        model = { ...config.schema, ...model, };
         let name = model.config.index || fileName.replace(/\.js/, '').toLowerCase();
-        model.config.index = name;
-        model.query = model.query || {};
         sails.log.info('Initializing elasticsearch index `'+name+'`');
+        model.config.index = name;
         indices.push(model);
         promises.push(_initIndex(model.config));
       });
