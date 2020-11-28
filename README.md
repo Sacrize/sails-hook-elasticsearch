@@ -9,7 +9,7 @@ npm install sails-hook-elasticsearch --save
 ## Configuration
 Configure `config/elasticsearch.js`:
 ```javascript
-module.exports.queues = {
+module.exports.elasticsearch = {
     indicesPath: 'indices',
     queue: {
       enable: true,
