@@ -96,6 +96,9 @@ module.exports = function (sails) {
       });
     },
     collect: _collect,
+    reCreateIndices: _reCreateIndices,
+    removeFromIndex: _removeFromIndex,
+    existsInIndex: _existsInIndex,
   }
 
   /**
@@ -381,7 +384,11 @@ module.exports = function (sails) {
     return _indexExists(config.index)
       .then(exists => {
         if (exists) {
-          return _updateIndex(config);
+          return _updateIndex(config)
+              .catch((e) => {
+                sails.log.debug('The schema could not be updated. Attempt to rebuild.');
+                return _reCreateIndices();
+              });
         } else {
           return _createIndex(config);
         }
@@ -395,18 +402,21 @@ module.exports = function (sails) {
    * @private
    */
   function _updateIndex(config) {
-    if (config.body.mappings) {
-      return client.indices.putMapping({ index: config.index, body: config.body.mappings, });
-    }
-    if (config.body.settings) {
-      return client.indices.close({ index: config.index, })
-        .then(() => {
-          return client.indices.putSettings({ index: config.index, body: config.body.settings, });
-        })
-        .then(() => {
-          return client.indices.open({ index: config.index, });
-        });
-    }
+    return new Promise(async (resolve) => {
+      if (config.body.mappings) {
+        await client.indices.putMapping({ index: config.index, body: config.body.mappings, });
+      }
+      if (config.body.settings) {
+        await client.indices.close({ index: config.index, })
+            .then(() => {
+              return client.indices.putSettings({ index: config.index, body: config.body.settings, });
+            })
+            .then(() => {
+              return client.indices.open({ index: config.index, });
+            });
+      }
+      resolve();
+    });
   }
 
   /**
