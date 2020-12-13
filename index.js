@@ -1,6 +1,7 @@
 const { Client } = require('@elastic/elasticsearch');
 const path = require('path');
 const fs = require('fs');
+const _ = require('lodash');
 
 module.exports = function (sails) {
 
@@ -37,7 +38,15 @@ module.exports = function (sails) {
           /**
            * Index configuration.
            */
-          config: {},
+          config: {
+            index: '',
+            body: {
+              mappings: {
+                properties: {},
+              },
+              settings: {},
+            },
+          },
           /**
            * Collect objects for indexing.
            * @param index
@@ -361,16 +370,15 @@ module.exports = function (sails) {
         if (!fileName.includes('.js')) {
           return;
         }
-        let model = require(normalizedPath + '/' + fileName);
-        model = { ...config.schema, ...model, };
+        let model = require(normalizedPath + '/' + fileName) || {};
+        model = _.merge({}, config.schema, model);
         let name = model.config.index || fileName.replace(/\.js/, '').toLowerCase();
         sails.log.info('Initializing elasticsearch index `'+name+'`');
         model.config.index = name;
         indices.push(model);
         promises.push(_initIndex(model.config));
       });
-      Promise.all(promises)
-        .then(() => resolve());
+      Promise.all(promises).then(() => resolve()).catch((e) => reject(e));
     })
   }
 
@@ -386,7 +394,7 @@ module.exports = function (sails) {
         if (exists) {
           return _updateIndex(config)
               .catch((e) => {
-                sails.log.debug('The schema could not be updated. Attempt to rebuild.');
+                sails.log.debug('The schema could not be updated. Rebuilding...');
                 return _reCreateIndices();
               });
         } else {
@@ -398,25 +406,47 @@ module.exports = function (sails) {
   /**
    * Updates an existing index.
    * @param {object} config
-   * @returns {Promise<ApiResponse<Record<string, any>, Context>>}
+   * @returns {Promise}
    * @private
    */
   function _updateIndex(config) {
-    return new Promise(async (resolve) => {
-      if (config.body.mappings) {
-        await client.indices.putMapping({ index: config.index, body: config.body.mappings, });
-      }
-      if (config.body.settings) {
-        await client.indices.close({ index: config.index, })
-            .then(() => {
-              return client.indices.putSettings({ index: config.index, body: config.body.settings, });
-            })
-            .then(() => {
-              return client.indices.open({ index: config.index, });
-            });
-      }
-      resolve();
-    });
+    return Promise.resolve()
+        .then(() => {
+          return _updateIndexMappings(config.index, config.body.mappings)
+        })
+        .then(() => {
+          return _updateIndexSettings(config.index, config.body.settings)
+        })
+  }
+
+  /**
+   * Updates mappings of existing index.
+   * @param {string} index
+   * @param {object} mappings
+   * @returns {Promise}
+   * @private
+   */
+  function _updateIndexMappings(index, mappings) {
+    if (_.isEmpty(mappings)) { return Promise.resolve(); }
+    return client.indices.putMapping({ index, body: mappings, });
+  }
+
+  /**
+   * Updates settings of existing index.
+   * @param {string} index
+   * @param {object} settings
+   * @returns {Promise}
+   * @private
+   */
+  function _updateIndexSettings(index, settings) {
+    if (_.isEmpty(settings)) { return Promise.resolve(); }
+    return client.indices.close({ index, })
+      .then(() => {
+        return client.indices.putSettings({ index, body: settings, });
+      })
+      .then(() => {
+        return client.indices.open({ index, });
+      });
   }
 
   /**

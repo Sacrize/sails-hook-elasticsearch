@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/Sacrize/sails-hook-elasticsearch#readme",
   "dependencies": {
-    "@elastic/elasticsearch": "^7.10.0"
+    "@elastic/elasticsearch": "^7.10.0",
+    "lodash": "^4.17.20"
   }
 }
