@@ -83,6 +83,9 @@ module.exports = function (sails) {
       }
     },
     initialize: function (cb) {
+      if (!config.client.node) {
+        return cb();
+      }
       sails.log.info('Initializing hook (`sails-hook-elasticsearch`)');
       client = new Client(config.client);
       _initIndices()
