@@ -11,7 +11,6 @@ module.exports = function (sails) {
 
   sails.on('ready', function () {
     _checkDependencies();
-    _populateIndices();
   });
 
   return {
@@ -105,9 +104,11 @@ module.exports = function (sails) {
       });
     },
     collect: _collect,
+    count: _count,
     reCreateIndices: _reCreateIndices,
     removeFromIndex: _removeFromIndex,
     existsInIndex: _existsInIndex,
+    populateIndices: _populateIndices,
   }
 
   /**
@@ -117,11 +118,12 @@ module.exports = function (sails) {
    * @param {object} [order]
    * @param {number} [page]
    * @param {number} [limit]
+   * @param {string[]} [select]
    * @param {object} [raw]
    * @returns {Promise<{hits: *|number, total: *|[]}>}
    * @private
    */
-  function _collect({ index, filter, order, page, limit, raw, }) {
+  function _collect({ index, filter, order, page, limit, select, raw, }) {
     raw = raw || {};
     filter = filter || {};
     order = order || {};
@@ -134,6 +136,9 @@ module.exports = function (sails) {
           track_scores: true,
           size: limit && limit > 0 ? limit : 9999,
           ...raw,
+        }
+        if (_.isArray(select) && select.length) {
+          searchQuery._source = select;
         }
         if (page && searchQuery.size) {
           searchQuery.from = (page - 1) * searchQuery.size;
@@ -148,6 +153,40 @@ module.exports = function (sails) {
             return {
               hits: result ? result.hits : 0,
               total: result ? result.total.value : [],
+            }
+          });
+      })
+  }
+
+  /**
+   *
+   * @param {string} index
+   * @param {object} [filter]
+   * @param {object} [order]
+   * @param {number} [page]
+   * @param {number} [limit]
+   * @param {string[]} [select]
+   * @param {object} [raw]
+   * @returns {Promise<{hits: *|number, total: *|[]}>}
+   * @private
+   */
+  function _count({ index, filter }) {
+    filter = filter || {};
+    return _getModelByIndex(index)
+      .then((model) => {
+        let searchQuery = {
+          index,
+          body: _buildQuery(model, filter),
+        }
+        return client.count(searchQuery)
+          .then(({ body }) => body.count)
+          .catch((error) => {
+            sails.log.debug(JSON.stringify(searchQuery));
+            sails.log.error(error);
+          })
+          .then((result) => {
+            return {
+              total: result,
             }
           });
       })
@@ -192,6 +231,10 @@ module.exports = function (sails) {
     filter = filter.filter(m => !!m);
     should = should.filter(m => !!m);
     must   =   must.filter(m => !!m);
+
+    if (model.query.compute) {
+      model.query.compute({ where, filter, should, must, sort, })
+    }
 
     if (_.isArray(order)) {
       sort = sort.concat(order);
