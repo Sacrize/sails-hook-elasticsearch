@@ -11,6 +11,7 @@ module.exports = function (sails) {
 
   sails.on('ready', function () {
     _checkDependencies();
+    //_populateIndices(true);
   });
 
   return {
