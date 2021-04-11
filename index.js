@@ -155,8 +155,8 @@ module.exports = function (sails) {
           })
           .then((result) => {
             return {
-              hits: result ? result.hits : 0,
-              total: result ? result.total.value : [],
+              hits: result ? result.hits : [],
+              total: result ? result.total.value : 0,
             }
           });
       })
