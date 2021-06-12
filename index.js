@@ -11,7 +11,10 @@ module.exports = function (sails) {
 
   sails.on('ready', function () {
     _checkDependencies();
-    _populateIndices(true);
+
+    // przepisac to bo przy kazdym starcie instancji bedzie czyscic indexy
+    _reCreateIndices().then(() => _populateIndices(true));
+
   });
 
   return {
